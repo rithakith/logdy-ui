@@ -33,8 +33,23 @@ export class Layout {
     }
 
     private prepareColumn(col: Column): Column {
-        let transpiled = ts.transpile(`return ` + col.handlerTsCode)
-        col.handler = new Function(transpiled)() as any
+        let transpiled = ts.transpile(`` + col.handlerTsCode)
+
+        let code = `
+        return function(line){
+        try{
+            let fn = ${transpiled}
+            let out = fn(line)
+            if(typeof out.text != 'string'){
+                // make sure text is string
+                out.text = JSON.stringify(out.text)
+            }
+            return out
+        }catch(e){
+            return {error: "Error: "+e.message}    
+        }
+    }`
+        col.handler = new Function(code)() as any
 
         return col
     }

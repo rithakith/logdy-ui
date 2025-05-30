@@ -12,7 +12,7 @@ interface ActionColumnHeader {
     type: "column_header", name: string
 }
 interface ActionCell {
-    type: "cell", value: string, columnId: string
+    type: "cell", value?: string, columnId: string, error?: string
 }
 
 type ActionTypes = ActionColumnHeader | ActionCell
@@ -28,7 +28,7 @@ export const useContextMenuStore = defineStore("context_menu", () => {
         switch (type.type) {
             case "cell":
                 const column = useMainStore().layout.getColumn(type.columnId)
-                if (column?.faceted) {
+                if (column?.faceted && !type.error) {
                     let ff = useMainStore().facets[column.name].items.find(i => i.label == type.value)
                     let label = "Filter by facet"
                     if (ff?.selected) {
@@ -71,7 +71,10 @@ export const useContextMenuStore = defineStore("context_menu", () => {
                 actions.value?.push({
                     label: "Copy value",
                     fn: () => {
-                        navigator.clipboard.writeText(type.value)
+                        let v = type.value || type.error
+                        if (v) {
+                            navigator.clipboard.writeText(v)
+                        }
                         hide()
                     }
                 })

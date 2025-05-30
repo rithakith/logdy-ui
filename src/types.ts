@@ -117,7 +117,7 @@ export type CellHandler = {
     /**
      * The value that will be presented in the table cell or log drawer
      */
-    text: string,
+    text?: string,
     /**
      * Whether the value is in JSON format
      * if so, a better formatting will be applied in the Log drawer
@@ -154,7 +154,9 @@ export type Facet = {
 
 type RowHandlerFn = (line: Message) => Message | void
 
-type CellHandlerFn = (line: Message) => CellHandler
+type CellHandlerWithError = CellHandler & { error?: string }
+
+type CellHandlerFn = (line: Message) => CellHandlerWithError
 
 export type Middleware = {
     id: string,
@@ -205,7 +207,7 @@ export type Row = MessageMetadata & {
     open?: boolean,
     orderKey?: number,
     msg: Message,
-    cells: CellHandler[], // these are the columns in the table
-    fields: CellHandler[], // these are the fields visible only in the drawer
+    cells: CellHandlerWithError[], // these are the columns in the table
+    fields: CellHandlerWithError[], // these are the fields visible only in the drawer
     facets: Facet[] // these are facets cumulated from all cells
 }

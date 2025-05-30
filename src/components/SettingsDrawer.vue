@@ -318,7 +318,6 @@ const add = () => {
 }
 
 const autoGenerate = () => {
-    console.log(props.sampleLine)
     if (!props.sampleLine) {
         return
     }
@@ -326,7 +325,7 @@ const autoGenerate = () => {
     Object.keys(props.sampleLine.json_content).forEach(k => {
         let col = {
             id: "new",
-            name: "column " + k.toString(),
+            name: k.toString(),
             handlerTsCode: `(line: Message): CellHandler => {
     return { text: line.json_content['${k.toString()}'] }
 }`

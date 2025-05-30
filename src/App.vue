@@ -160,7 +160,7 @@ const addMessages = (msgs: Message[]): Message[] => {
     let cells = store.layout.columns.filter(c => !c.hidden).map((l): CellHandler => {
       try {
         let h = l.handler!(m)
-        if (l.faceted) {
+        if (l.faceted && h.text !== undefined) {
           h.facets = (h.facets || [])
           h.facets.push({
             name: l.name,
@@ -170,14 +170,14 @@ const addMessages = (msgs: Message[]): Message[] => {
         h.facets?.forEach(addToFacet)
         return h
       } catch (e) {
-        console.log(e)
+        console.log("Error while running handler", { message: m, error: e })
         return { text: "error" }
       }
     })
     let fields = store.layout.columns.filter(c => c.hidden).map((l): CellHandler => {
       try {
         let h = l.handler!(m)
-        if (l.faceted) {
+        if (l.faceted && h.text !== undefined) {
           h.facets = (h.facets || [])
           h.facets.push({
             name: l.name,
@@ -187,7 +187,7 @@ const addMessages = (msgs: Message[]): Message[] => {
         h.facets?.forEach(addToFacet)
         return h
       } catch (e) {
-        console.log(e)
+        console.log("Error while running handler", { message: m, error: e })
         return { text: "error" }
       }
     })
@@ -736,14 +736,16 @@ const updateSampleLine = () => {
                   ⬤
                 </span>
               </td>
-              <td class="cell" v-for="c, k2 in columns" :style="row.cells[k2].style as StyleValue || {}">
-                <div :style="{ width: columns[k2].width + 'px' }" v-if="row.cells[k2].allowHtmlInText"
-                  v-html="row.cells[k2].text !== undefined ? row.cells[k2].text : '&nbsp;'"
-                  @contextmenu.prevent="useContextMenuStore().show($event, { type: 'cell', value: row.cells[k2].text, columnId: c.id })">
+              <td class="cell" v-for="c, k2 in columns" :style="row.cells[k2].style as StyleValue || {}"
+                :class="{ 'cell-error': row.cells[k2].error }">
+                <div v-if="row.cells[k2].allowHtmlInText" :style="{ width: columns[k2].width + 'px' }"
+                  v-html="row.cells[k2].text !== undefined ? row.cells[k2].text : row.cells[k2].error || '&nbsp;'"
+                  @contextmenu.prevent="useContextMenuStore().show($event, { type: 'cell', value: row.cells[k2].text, columnId: c.id, error: row.cells[k2].error })">
                 </div>
-                <div :style="{ width: columns[k2].width + 'px' }"
-                  @contextmenu.prevent="useContextMenuStore().show($event, { type: 'cell', value: row.cells[k2].text, columnId: c.id })"
-                  v-else>{{ row.cells[k2].text !== undefined ? row.cells[k2].text : "&nbsp;" }}</div>
+                <div v-else :style="{ width: columns[k2].width + 'px' }"
+                  @contextmenu.prevent="useContextMenuStore().show($event, { type: 'cell', value: row.cells[k2].text, columnId: c.id, error: row.cells[k2].error })">
+                  {{ row.cells[k2].text !== undefined ? row.cells[k2].text : row.cells[k2].error || "&nbsp;" }}
+                </div>
 
               </td>
               <td class="cell" v-if="store.correlationFilter" style="min-width: 50px;">

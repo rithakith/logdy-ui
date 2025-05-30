@@ -21,7 +21,10 @@ defineEmits<{
     (e: 'close'): void
 }>()
 
-const copyToClipboard = (value: string) => {
+const copyToClipboard = (value: string|undefined) => {
+    if(!value){
+        return
+    }
     navigator.clipboard.writeText(value)
 }
 
@@ -51,17 +54,17 @@ const copyToClipboard = (value: string) => {
             <hr />
             <h3>Table columns</h3>
             <div v-for="col, k in layout?.columns.filter(c => !c.hidden)">
-                <h4 v-tooltip="'Click to copy'" style="display: inline;" @click="copyToClipboard(row.cells[k].text)">{{
+                <h4 v-tooltip="'Click to copy'" style="display: inline;" @click="copyToClipboard(row.cells[k].text||row.cells[k].error)">{{
                     col.name }}
                     <Clipboard :class="'clipboard'" />
                 </h4>
-                <pre v-if="row.cells[k] && !row.cells[k].isJson">{{ row.cells[k].text }}</pre>
-                <pre v-else><VueJsonPretty  :theme="'dark'" :data="JSON.parse(row.cells[k].text)"></VueJsonPretty></pre>
+                <pre v-if="row.cells[k] && !row.cells[k].isJson">{{ row.cells[k].text||row.cells[k].error }}</pre>
+                <pre v-else-if="row.cells[k].text"><VueJsonPretty :theme="'dark'" :data="JSON.parse(row.cells[k].text)"></VueJsonPretty></pre>
 
             </div>
             <h3>Non-table fields</h3>
             <div v-for="col, k in layout?.columns.filter(c => c.hidden)">
-                <h4 v-tooltip="'Click to copy'" style="display: inline;" @click="copyToClipboard(row.fields[k].text)">{{
+                <h4 v-tooltip="'Click to copy'" style="display: inline;" @click="copyToClipboard(row.fields[k].text||row.cells[k].error)">{{
                     col.name }}
                     <Clipboard :class="'clipboard'" />
                 </h4>
