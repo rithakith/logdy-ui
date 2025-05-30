@@ -188,6 +188,7 @@ let selectedColumn = ref<Column>()
 let sampleLineVisible = ref<boolean>(true)
 let selectedMiddleware = ref<Middleware>()
 let settings = ref<Settings>({ leftColWidth: 200, drawerColWidth: 900, maxMessages: 1000, middlewares: [], entriesOrder: "desc" })
+let saveError = ref<String | null>(null)
 
 const props = defineProps<{
     layout: Layout,
@@ -257,6 +258,8 @@ const edit = (id: string) => {
     selectedColumn.value = { ...props.layout.getColumn(id) }
     if (!models[id]) {
         models[id] = monaco.editor.createModel(props.layout.getColumn(id).handlerTsCode!, "typescript", monaco.Uri.parse("ts:" + id + ".ts"))
+    } else {
+        models[id].setValue(props.layout.getColumn(id).handlerTsCode!)
     }
     loadModel(editor, models[id], 'editor')
 }
@@ -265,8 +268,20 @@ const save = () => {
     if (!selectedColumn.value) {
         throw new Error("Failed to update")
     }
+    let uri = monaco.Uri.parse("ts:" + selectedColumn.value!.id + ".ts")
+    let markers = monaco.editor.getModelMarkers({ resource: uri })
+
+    if (markers.length > 0) {
+        saveError.value = markers.map(m => {
+            return "- " + m.message
+        }).join("\n")
+        return
+    } else {
+        saveError.value = null
+    }
+
     selectedColumn.value.handlerTsCode = monaco.editor.getModels().find(m => {
-        return m.uri.toString() === "ts:" + selectedColumn.value!.id + ".ts"
+        return m.uri.toString() === uri.toString()
     })!.getValue()
     emit('edit', selectedColumn.value)
     selectedColumn.value = undefined
@@ -510,9 +525,12 @@ const addMiddleware = () => {
 
                 <div style="margin:10px 0;" :style="{ 'display': !selectedColumn ? 'none' : 'block' }" id="editor">
                 </div>
+                <div v-if="saveError" class="save-error error-bg">Looks like there are errors in the code, please check
+                    the editor
+                    hints.</div>
                 <div style="margin-top:10px" v-if="selectedColumn">
                     <button @click="save()">Save</button>
-                    <button @click="selectedColumn = undefined">Cancel</button>
+                    <button @click="selectedColumn = undefined; saveError = null">Cancel</button>
                 </div>
             </div>
             <div class="sample-line">
@@ -582,6 +600,10 @@ hr {
     .column-edit {
         button {
             margin-right: 5px;
+        }
+
+        .save-error {
+            padding: 10px;
         }
     }
 
