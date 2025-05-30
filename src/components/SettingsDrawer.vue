@@ -188,7 +188,8 @@ let selectedColumn = ref<Column>()
 let sampleLineVisible = ref<boolean>(true)
 let selectedMiddleware = ref<Middleware>()
 let settings = ref<Settings>({ leftColWidth: 200, drawerColWidth: 900, maxMessages: 1000, middlewares: [], entriesOrder: "desc" })
-let saveError = ref<String | null>(null)
+let saveColumnError = ref<string | null>(null)
+let saveSettingsError = ref<string | null>(null)
 
 const props = defineProps<{
     layout: Layout,
@@ -231,7 +232,6 @@ const createEditor = (elId: string): monaco.editor.IStandaloneCodeEditor => {
 }
 
 onMounted(() => {
-
     editor = createEditor('editor')
     editorMiddleware = createEditor('middleware-editor')
 
@@ -259,6 +259,7 @@ const edit = (id: string) => {
     if (!models[id]) {
         models[id] = monaco.editor.createModel(props.layout.getColumn(id).handlerTsCode!, "typescript", monaco.Uri.parse("ts:" + id + ".ts"))
     } else {
+        // load the latest value
         models[id].setValue(props.layout.getColumn(id).handlerTsCode!)
     }
     loadModel(editor, models[id], 'editor')
@@ -269,15 +270,15 @@ const save = () => {
         throw new Error("Failed to update")
     }
     let uri = monaco.Uri.parse("ts:" + selectedColumn.value!.id + ".ts")
-    let markers = monaco.editor.getModelMarkers({ resource: uri })
+    let markers = monaco.editor.getModelMarkers({ resource: uri }).filter(m=>m.severity === monaco.MarkerSeverity.Error)
 
     if (markers.length > 0) {
-        saveError.value = markers.map(m => {
+        saveColumnError.value = markers.map(m => {
             return "- " + m.message
         }).join("\n")
         return
     } else {
-        saveError.value = null
+        saveColumnError.value = null
     }
 
     selectedColumn.value.handlerTsCode = monaco.editor.getModels().find(m => {
@@ -289,6 +290,11 @@ const save = () => {
 
 const saveSettings = () => {
     emit('settings-update', { ...settings.value! })
+    settingsChanged.value = false
+}
+const saveSettingsAndClose = () => {
+    emit('settings-update', { ...settings.value! })
+    emit('close')
 }
 
 const cancelSettings = () => {
@@ -369,6 +375,7 @@ const removeCol = (colId: string) => {
 }
 
 const editMiddleware = (id: string) => {
+    saveSettingsError.value=null
     let m = settings.value.middlewares.find(m => m.id === id)
     if (!m) {
         throw new Error('Not found')
@@ -376,6 +383,8 @@ const editMiddleware = (id: string) => {
     selectedMiddleware.value = { ...m }
     if (!models[id]) {
         models[id] = monaco.editor.createModel(m?.handlerTsCode!, "typescript", monaco.Uri.parse("ts:" + id + ".ts"))
+    } else {
+        models[id].setValue(m?.handlerTsCode!)
     }
     loadModel(editorMiddleware, models[id], 'middleware-editor')
 }
@@ -389,10 +398,20 @@ const removeMiddleware = (mid: string) => {
 }
 
 const saveMiddleware = () => {
-    settingsChanged.value = true
+    let uri = monaco.Uri.parse("ts:" + selectedMiddleware.value!.id + ".ts")
+    let markers = monaco.editor.getModelMarkers({ resource: uri }).filter(m=>m.severity === monaco.MarkerSeverity.Error)
+
+    if (markers.length > 0) {
+        saveSettingsError.value = "error"
+        return
+    } else {
+        saveSettingsError.value = null
+    }
+
     selectedMiddleware.value!.handlerTsCode = monaco.editor.getModels().find(m => {
-        return m.uri.toString() === "ts:" + selectedMiddleware.value!.id + ".ts"
+        return m.uri.toString() === uri.toString()
     })!.getValue()
+    settingsChanged.value = true
 
     let idx = settings.value.middlewares.findIndex(m => m.id === selectedMiddleware.value?.id)
 
@@ -408,6 +427,7 @@ const cancelMiddleware = () => {
     selectedMiddleware.value = undefined
 }
 const addMiddleware = () => {
+    saveSettingsError.value=null
     let id = "m_" + Math.random().toString().substring(2, 8)
     selectedMiddleware.value = {
         id,
@@ -432,10 +452,11 @@ const addMiddleware = () => {
                     <Sun v-if="themeHandler.theme.value === 'dark'" />
                     <Moon v-if="themeHandler.theme.value === 'light'" />
                 </button>
-                <button @click="$emit('close')">Close</button>
+                <button :disabled="settingsChanged" @click="$emit('close')"
+                    v-tooltip="settingsChanged ? 'Save or discard settings first' : null">Close</button>
             </div>
 
-            <div class="settings" v-if="settings && !selectedColumn">
+            <div class="settings" v-if="settings" :style="{display: selectedColumn ? 'none': 'block'}">
                 <h2>Settings
                     <button class="btn-sm" @click="useMainStore().modalShow = 'import'">Export / import</button>
                 </h2>
@@ -468,14 +489,23 @@ const addMiddleware = () => {
                     <div style="margin:10px 0;" :style="{ 'display': !selectedMiddleware ? 'none' : 'block' }"
                         id="middleware-editor"></div>
                     <div v-if="selectedMiddleware">
-                        <button @click="saveMiddleware" class="btn-sm">Save middleware</button>
+                        <div v-if="saveSettingsError" class="save-error error-bg" style="margin-bottom: 10px">Looks like
+                            there
+                            are errors in the code,
+                            please check
+                            the editor
+                            hints. {{saveSettingsError}}</div>
+                        <button @click="saveMiddleware" :disabled="!selectedMiddleware.name" class="btn-sm">Save middleware</button>
                         <button @click="cancelMiddleware" class="btn-sm">Cancel</button>
                     </div>
 
                 </div>
                 <div class="buttons">
-                    <button :disabled="!settingsChanged" class="btn-sm" @click="saveSettings">Save settings</button>
-                    <button @click="cancelSettings" class="btn-sm">Cancel</button>
+                    <button :disabled="!settingsChanged" class="btn-sm" :class="{ success: settingsChanged }"
+                        @click="saveSettings">Save</button>
+                    <button :disabled="!settingsChanged" class="btn-sm" :class="{ success: settingsChanged }"
+                        @click="saveSettingsAndClose">Save & close</button>
+                    <button :disabled="!settingsChanged" @click="cancelSettings" class="btn-sm">Cancel</button>
                 </div>
                 <hr />
             </div>
@@ -525,12 +555,14 @@ const addMiddleware = () => {
 
                 <div style="margin:10px 0;" :style="{ 'display': !selectedColumn ? 'none' : 'block' }" id="editor">
                 </div>
-                <div v-if="saveError" class="save-error error-bg">Looks like there are errors in the code, please check
+                <div v-if="saveColumnError" class="save-error error-bg" style="padding:10px">Looks like there are errors
+                    in the code, please
+                    check
                     the editor
                     hints.</div>
                 <div style="margin-top:10px" v-if="selectedColumn">
                     <button @click="save()">Save</button>
-                    <button @click="selectedColumn = undefined; saveError = null">Cancel</button>
+                    <button @click="selectedColumn = undefined; saveColumnError = null">Cancel</button>
                 </div>
             </div>
             <div class="sample-line">
@@ -581,12 +613,25 @@ hr {
         margin: 2px;
     }
 
+
     .settings {
+        .save-error {
+            padding: 10px;
+        }
+
         .buttons {
             margin-top: 10px;
+            background: rgba(0, 0, 0, .2);
+            padding: 10px;
+            text-align: right;
 
             button {
+                font-size: 16px;
                 margin-right: 5px;
+            }
+
+            .success {
+                background-color: rgb(53, 182, 70);
             }
         }
 
@@ -602,9 +647,6 @@ hr {
             margin-right: 5px;
         }
 
-        .save-error {
-            padding: 10px;
-        }
     }
 
     .input {
