@@ -227,18 +227,29 @@ export const useMainStore = defineStore("main", () => {
             return
         }
 
+        let idx = 0
+        if (layout.value.settings.entriesOrder === 'desc') {
+            idx = displayRows.value.length - 1
+        }
+
         let traces: Record<string, TraceRow> = {}
-        let absStart = displayRows.value[0].msg.timing && displayRows.value[0].msg.timing.start || 0
+        let absStart = displayRows.value[idx].msg.timing && displayRows.value[idx].msg.timing!.start || 0
         let resolution = 1//(end - absStart) / 1000
         displayRows.value.forEach((r) => {
             if (!r.msg.timing) {
                 return
             }
 
+            let duration = r.msg.timing.duration
+
+            if (r.msg.timing.end) {
+                duration = r.msg.timing.end - r.msg.timing.start
+            }
+
             traces[r.id] = {
                 id: r.id,
                 offset: (r.msg.timing!.start - absStart) / resolution,
-                width: (r.msg.timing?.duration || 1) / resolution,
+                width: (duration || 1) / resolution,
                 label: r.msg.timing?.label,
                 style: r.msg.timing?.style || {}
             }
