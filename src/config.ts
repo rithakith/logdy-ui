@@ -56,8 +56,20 @@ export class Layout {
 
     processMiddlewareHandlers() {
         this.settings.middlewares = this.settings.middlewares.map(m => {
-            let transpiled = ts.transpile(`return ` + m.handlerTsCode)
-            m.handler = new Function(transpiled)() as any
+            let transpiled = ts.transpile(`` + m.handlerTsCode)
+
+            let code = `
+                return function(line){
+                try{
+                    let fn = ${transpiled}
+                    return fn(line)
+                }catch(e){
+                    console.error("Error while executing middleware '${m.name}': ", e.message)
+                    return line    
+                }
+            }`
+
+            m.handler = new Function(code)() as any
             return m
         })
     }
