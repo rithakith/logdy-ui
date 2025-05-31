@@ -13,7 +13,8 @@ export function generateData(json: boolean, separator: string = " | "): object |
         method: faker.internet.httpMethod(),
         issuer: faker.finance.creditCardIssuer(),
         duration: Math.round(Math.random() * 250),
-        active: Math.random() > 0.5
+        active: Math.random() > 0.5,
+        requestId: "req_" + Math.round(Math.random() * 10).toString(),
     }
 
     return json ? data : Object.values(data).join(separator)
@@ -32,9 +33,32 @@ export function getLayout(json: boolean = true): Layout {
     return line;
 }`
         })
+    } else {
+        middlewares.push({
+            id: "1",
+            name: "timing",
+            handlerTsCode: `(line: Message): Message | void => {
+            let duration = 1000 + Math.round(Math.random() * 500)
+    line.timing = {
+            start: line.ts,
+            end: line.ts + duration,
+            // duration: duration,
+            label: duration.toString() + "ms"
+    }
+    return line;
+}`
+        })
     }
 
-    let l = new Layout("demo", { maxMessages: 1000, leftColWidth: 300, drawerColWidth: 900, middlewares, entriesOrder: "desc" })
+    let l = new Layout("demo", {
+        maxMessages: 1000,
+        leftColWidth: 300,
+        drawerColWidth: 900,
+        middlewares,
+        entriesOrder: "desc",
+        correlationIdField: "requestId",
+        paintCorrelationIdCell: true
+    })
 
     if (!json) {
         l.add({
@@ -55,6 +79,13 @@ export function getLayout(json: boolean = true): Layout {
         name: "ts",
         handlerTsCode: `(line: Message): CellHandler => {
             return { text: moment().format('DD-MM HH:mm:ss.SSS') }
+        }`
+    })
+    l.add({
+        id: "",
+        name: "requestId",
+        handlerTsCode: `(line: Message): CellHandler => {
+            return { text: line.json_content.requestId }
         }`
     })
 
