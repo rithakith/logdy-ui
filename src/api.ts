@@ -101,6 +101,12 @@ class httpClient {
         })
     }
 
+    async configSave(layout: string) {
+        return this.sendPost("config/save", {
+            layout
+        })
+    }
+
     async load(offset: number, count: number) {
         return this.sendGet(`client/load?start=${offset + 1}&count=${count}`)
     }

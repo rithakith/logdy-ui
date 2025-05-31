@@ -335,6 +335,10 @@
       border: 1px solid rgb(95, 118, 194);
       background: var(--info);
     }
+    &.alert-danger {
+      border: 1px solid #e577779d;
+      background: var(--info);
+    }
   }
 
   .error-bg {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Layout } from '../config';
+import { client } from '../api';
 
 const props = defineProps<{
     layout: Layout
@@ -11,6 +12,8 @@ const emit = defineEmits<{
 }>()
 
 const copied = ref<boolean>(false)
+const saved = ref<string | null>(null)
+const savedError = ref<boolean>(false)
 const imported = ref<string>("")
 const importResult = ref<string>("")
 
@@ -21,6 +24,15 @@ const exportLayout = () => {
 const copy = () => {
     navigator.clipboard.writeText(exportLayout())
     copied.value = true
+}
+
+const save = async() => {
+    let res = await client.configSave(exportLayout())
+    if(res.status !== 200){
+        savedError.value = true
+        return
+    }
+    saved.value = res.json!.location || "unknown"
 }
 
 function downloadFile(file: File) {
@@ -86,8 +98,12 @@ const importLayout = (data: string) => {
         exported (not log messages).
         <h2>Export</h2>
         <button class="btn" @click="copy">Copy to clipboard</button>
-        <button class="btn" @click="download">Save as file</button>
-        <span v-if="copied">copied</span>
+        <button class="btn" @click="download">Download</button>
+        <button class="btn" @click="save">Save locally to config file</button>
+        <br/>
+        <div class="alert alert-info" v-if="copied">Copied</div>
+        <div class="alert alert-info" v-if="saved">Saved to: {{saved}}</div>
+        <div class="alert alert-danger" v-if="savedError">Error while saving to a file</div>
         <hr />
         <h2>Import</h2>
         <textarea rows="5"

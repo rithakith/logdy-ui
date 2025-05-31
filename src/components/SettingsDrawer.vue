@@ -454,6 +454,7 @@ const addMiddleware = () => {
     <div class="drawer">
         <div class="inner-drawer">
             <div class="header">
+                <button class="btn" style="margin-right:3px;" @click="useMainStore().modalShow = 'import'">Export / import settings and columns</button>
                 <button class="btn" style="padding:0.6em; margin-right:3px;" @click="themeHandler.toggleTheme()">
                     <Sun v-if="themeHandler.theme.value === 'dark'" />
                     <Moon v-if="themeHandler.theme.value === 'light'" />
@@ -464,7 +465,6 @@ const addMiddleware = () => {
 
             <div class="settings" v-if="settings" :style="{display: selectedColumn ? 'none': 'block'}">
                 <h2>Settings
-                    <button class="btn-sm" @click="useMainStore().modalShow = 'import'">Export / import</button>
                 </h2>
                 <div class="block">
                     Order of entries
