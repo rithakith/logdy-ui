@@ -35,6 +35,7 @@ import Close from './components/icon/Close.vue';
 import { useContextMenuStore } from './stores/contextMenu';
 import { globalEventBus } from './event_bus';
 import { useNotificationBarStore } from './stores/notificationBar';
+import { hashStringToRgb } from './utils';
 
 const store = useMainStore()
 const storeFilter = useFilterStore()
@@ -155,6 +156,10 @@ const addMessages = (msgs: Message[]): Message[] => {
   }
 
   let toAdd: Row[] = []
+  let correlationIdIdx: number = -1
+  if(store.layout.settings.correlationIdField){
+    correlationIdIdx = store.layout.columns.findIndex(c => c.name === store.layout.settings.correlationIdField)
+  }
   msgs.forEach(m => {
 
     let cells = store.layout.columns.filter(c => !c.hidden).map((l): CellHandler => {
@@ -191,6 +196,10 @@ const addMessages = (msgs: Message[]): Message[] => {
         return { text: "error" }
       }
     })
+
+    if(store.layout.settings.correlationIdField && !m.correlation_id){
+      m.correlation_id = cells[correlationIdIdx].text
+    }
 
     store.rowsIds[m.id] = true
     toAdd.push({
@@ -736,7 +745,9 @@ const updateSampleLine = () => {
                   ⬤
                 </span>
               </td>
-              <td class="cell" v-for="c, k2 in columns" :style="row.cells[k2].style as StyleValue || {}"
+              <td class="cell" v-for="c, k2 in columns" :style="Object.assign(row.cells[k2].style as StyleValue || {},{
+                  backgroundColor: (store.layout.settings.paintCorrelationIdCell && store.layout.settings.correlationIdField == c.name) ? hashStringToRgb(row.cells[k2].text||'', 40): ''
+                } as StyleValue)"
                 :class="{ 'cell-error': row.cells[k2].error }">
                 <div v-if="row.cells[k2].allowHtmlInText" :style="{ width: columns[k2].width + 'px' }"
                   v-html="row.cells[k2].text !== undefined ? row.cells[k2].text : row.cells[k2].error || '&nbsp;'"

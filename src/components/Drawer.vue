@@ -43,7 +43,7 @@ const copyToClipboard = (value: string|undefined) => {
                 <button @click="$emit('close')">Close <kbd>Esc</kbd></button>
             </div>
             <div>
-                <button @click="useMainStore().filterCorrelated(row.msg)" :disabled="!row.msg.correlation_id">
+                <button @click="useMainStore().filterCorrelated(row.msg)" :disabled="!row.msg.correlation_id && !layout?.settings.correlationIdField">
                     Display correlated lines
                 </button>
                 <button @click="useMainStore().resetCorrelationFilter()" v-if="useMainStore().correlationFilter"

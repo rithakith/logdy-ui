@@ -187,7 +187,7 @@ const settingsChanged = ref<boolean>(false)
 let selectedColumn = ref<Column>()
 let sampleLineVisible = ref<boolean>(true)
 let selectedMiddleware = ref<Middleware>()
-let settings = ref<Settings>({ leftColWidth: 200, drawerColWidth: 900, maxMessages: 1000, middlewares: [], entriesOrder: "desc" })
+let settings = ref<Settings>({ leftColWidth: 200, drawerColWidth: 900, maxMessages: 1000, middlewares: [], entriesOrder: "desc"})
 let saveColumnError = ref<string | null>(null)
 let saveSettingsError = ref<string | null>(null)
 
@@ -244,6 +244,12 @@ onMounted(() => {
         settingsChanged.value = true
     })
     watch(() => settings.value.middlewares, () => {
+        settingsChanged.value = true
+    })
+    watch(() => settings.value.paintCorrelationIdCell, () => {
+        settingsChanged.value = true
+    })
+    watch(() => settings.value.correlationIdField, () => {
         settingsChanged.value = true
     })
 })
@@ -466,6 +472,20 @@ const addMiddleware = () => {
                         @click="settings.entriesOrder = 'desc'">Newest at the top</button>
                     <button class="btn-sm" :disabled="settings.entriesOrder === 'asc'"
                         @click="settings.entriesOrder = 'asc'">Newest at the bottom</button>
+                    </div>
+                    <div class="block">
+                        Selected "correlation id" column
+                        <select v-model="settings.correlationIdField">
+                            <option :value="''"></option>
+                            <option v-for="col in layout.columns" :id="'container_' + col.name">{{col.name}}</option>
+                        </select>
+                    </div>
+                    <div class="block">
+                        Paint the same "correlation id" cells
+                        <button class="btn-sm" :disabled="settings.paintCorrelationIdCell"
+                            @click="settings.paintCorrelationIdCell = true">Enabled</button>
+                        <button class="btn-sm" :disabled="!settings.paintCorrelationIdCell"
+                            @click="settings.paintCorrelationIdCell = false">Disabled</button>
                 </div>
                 <div class="block">
                     <div>Maximum number of log messages stored in the browser</div>
@@ -615,6 +635,12 @@ hr {
 
 
     .settings {
+        select{
+            font-family: 'Roboto mono', sans-serif;
+            font-size: 12px;
+            padding:4px;
+        }
+        
         .save-error {
             padding: 10px;
         }

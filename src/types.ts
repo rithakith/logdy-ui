@@ -6,7 +6,9 @@ export type Settings = {
     entriesOrder: "asc" | "desc",
     leftColWidth: number,
     drawerColWidth: number,
-    middlewares: Middleware[]
+    middlewares: Middleware[],
+    correlationIdField?: string,
+    paintCorrelationIdCell?: boolean,
 }
 
 export type Message = {
