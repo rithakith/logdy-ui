@@ -218,7 +218,11 @@ export const useMainStore = defineStore("main", () => {
         if (!row.correlation_id) {
             return
         }
-        correlationFilter.value = row.correlation_id
+        filterCorrelatedId(row.correlation_id)
+    }
+
+    const filterCorrelatedId = (id: string) => {
+        correlationFilter.value = id
         refeshFilterCorrelated()
     }
 
@@ -511,6 +515,7 @@ export const useMainStore = defineStore("main", () => {
         clearAllRows,
         resetAllFiltersAndFacets,
         filterCorrelated,
+        filterCorrelatedId,
         correlationFilter,
         resetCorrelationFilter,
         tracesRows,

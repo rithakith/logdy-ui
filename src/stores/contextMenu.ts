@@ -25,9 +25,10 @@ export const useContextMenuStore = defineStore("context_menu", () => {
         x.value = e.clientX + 1;
         y.value = e.clientY + 1;
 
+        let layout = useMainStore().layout
         switch (type.type) {
             case "cell":
-                const column = useMainStore().layout.getColumn(type.columnId)
+                const column = layout.getColumn(type.columnId)
                 if (column?.faceted && !type.error) {
                     let ff = useMainStore().facets[column.name].items.find(i => i.label == type.value)
                     let label = "Filter by facet"
@@ -40,6 +41,15 @@ export const useContextMenuStore = defineStore("context_menu", () => {
                             if (ff) {
                                 ff.selected = !ff.selected
                             }
+                            hide()
+                        }
+                    })
+                }
+                if (layout.settings.correlationIdField === column.name && type.value) {
+                    actions.value?.push({
+                        label: "Display correlated lines",
+                        fn: () => {
+                            useMainStore().filterCorrelatedId(type.value!)
                             hide()
                         }
                     })
