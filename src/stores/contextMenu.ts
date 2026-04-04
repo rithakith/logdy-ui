@@ -12,7 +12,7 @@ interface ActionColumnHeader {
     type: "column_header", name: string
 }
 interface ActionCell {
-    type: "cell", value?: string, columnId: string, error?: string
+    type: "cell", value?: string, columnId: string, error?: string, rowId: string
 }
 
 type ActionTypes = ActionColumnHeader | ActionCell
@@ -49,11 +49,18 @@ export const useContextMenuStore = defineStore("context_menu", () => {
                     actions.value?.push({
                         label: "Display correlated lines",
                         fn: () => {
-                            useMainStore().filterCorrelatedId(type.value!)
+                            useMainStore().filterCorrelatedId(type.value!, type.rowId)
                             hide()
                         }
                     })
                 }
+                actions.value?.push({
+                    label: "Show in context",
+                    fn: () => {
+                        useMainStore().showInContext(type.rowId)
+                        hide()
+                    }
+                })
                 /**
                  * The feature of filtering by value is currently disabled due to the fact that 
                  * we're unable to effectively trace the source field only by using name.

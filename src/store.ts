@@ -9,6 +9,7 @@ import { formatThousands, getUrlParam } from "./utils";
 import { SortPropName } from "./components/Facet.vue";
 import { BreserFilterData, BreserSetQuery } from "./breser";
 import moment from "moment";
+import { globalEventBus } from "./event_bus";
 
 export interface Notification {
     id?: string;
@@ -76,6 +77,7 @@ export const useMainStore = defineStore("main", () => {
     const searchbar = ref<string>("")
     const settingsDrawer = ref<boolean>(false)
     const correlationFilter = ref<string>("")
+    const highlightedRowId = ref<string>("")
     const tracesRows = ref<Record<string, TraceRow>>({})
     const facetSort = ref<SortPropName>("label")
 
@@ -214,7 +216,7 @@ export const useMainStore = defineStore("main", () => {
         return '-'
     })
 
-    const filterCorrelated = (row: Message) => {
+    const filterCorrelated = (row: Row | Message) => {
         if (!row.correlation_id) {
             return
         }
@@ -224,6 +226,17 @@ export const useMainStore = defineStore("main", () => {
     const filterCorrelatedId = (id: string) => {
         correlationFilter.value = id
         refeshFilterCorrelated()
+    }
+
+    const showInContext = (rowId: string) => {
+        searchbar.value = ""
+        globalEventBus.emit('searchbar-update', "")
+        resetAllFiltersAndFacets()
+        correlationFilter.value = ""
+        highlightedRowId.value = rowId
+        setTimeout(() => {
+            globalEventBus.emit('scroll-to-row', rowId)
+        }, 50)
     }
 
     const refeshFilterCorrelated = () => {
@@ -269,6 +282,7 @@ export const useMainStore = defineStore("main", () => {
 
     const resetCorrelationFilter = () => {
         correlationFilter.value = ""
+        highlightedRowId.value = ""
     }
 
     const changeReceiveStatus = async (status: ReceiveStatus) => {
@@ -402,17 +416,10 @@ export const useMainStore = defineStore("main", () => {
                 }
             })
             return cnt === 0
-        }).filter(r => {
-            if (breserQuery.value.length > 0) {
-                return true
-            }
-            if (searchbar.value.length < 3) {
-                return true
-            }
-            return (r.msg.content || "").search(new RegExp(searchbar.value, 'i')) >= 0
         })
 
-        if (isRecordJson && breserQuery.value.length > 0) {
+        let breserResults: boolean[] = []
+        if (isRecordJson && breserQuery.value.length > 0 && breserQueryError.value.length === 0) {
             let res = BreserFilterData(response.map(m => {
                 return {
                     data: m.msg.json_content,
@@ -421,17 +428,29 @@ export const useMainStore = defineStore("main", () => {
                     origin: m.msg.origin
                 }
             }).filter(m => m))
-            if (!res.result || res.result.length != response.length) {
-                return response
+            if (res && !res.error && res.result && res.result.length == response.length) {
+                breserResults = res.result
             }
-            if (res && res.error) {
-                breserQueryError.value = res.error
-                return response
-            }
-            return response.filter((_, i) => {
-                return res.result[i]
-            })
         }
+
+        response = response.filter((r, i) => {
+            if (searchbar.value.length < 1) {
+                return true
+            }
+
+            // check string match
+            const matchesString = (r.msg.content || "").search(new RegExp(searchbar.value, 'i')) >= 0
+            if (matchesString) {
+                return true
+            }
+
+            // check breser match
+            if (breserResults.length > 0 && breserResults[i]) {
+                return true
+            }
+
+            return false
+        })
 
         if (layout.value.settings.entriesOrder === 'desc') {
             return response.reverse()
@@ -516,7 +535,9 @@ export const useMainStore = defineStore("main", () => {
         resetAllFiltersAndFacets,
         filterCorrelated,
         filterCorrelatedId,
+        showInContext,
         correlationFilter,
+        highlightedRowId,
         resetCorrelationFilter,
         tracesRows,
         refeshFilterCorrelated,

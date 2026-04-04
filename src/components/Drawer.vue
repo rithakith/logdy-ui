@@ -47,6 +47,9 @@ const copyToClipboard = (value: string | undefined) => {
                     :disabled="!row.msg.correlation_id && !layout?.settings.correlationIdField">
                     Display correlated lines
                 </button>
+                <button @click="useMainStore().showInContext(row.id)" style="margin-left: 5px">
+                    Show in context
+                </button>
                 <button @click="useMainStore().resetCorrelationFilter()" v-if="useMainStore().correlationFilter"
                     style="margin-left: 5px">
                     Reset correlation filter
