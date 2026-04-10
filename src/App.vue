@@ -504,9 +504,6 @@ const addDemoData = (count: number = 1) => {
   }
 }
 
-const updateSearchbar = () => {
-  store.searchbar = searchbar.value
-}
 
 globalEventBus.on('searchbar-update', (value: string) => {
   store.searchbar = value
@@ -543,6 +540,12 @@ onMounted(async () => {
 
 
   initKeyEventListeners()
+  globalEventBus.on('scroll-to-row', (id: string) => {
+    let el = document.getElementById('row-' + id)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  })
 
   table.value?.addEventListener("scroll", () => {
     if (!shouldStickToBottom()) {
@@ -706,8 +709,8 @@ const processHighlight = (text: string | undefined) => {
         </div>
       </div>
       <div class="right">
-        <input type="text" class="searchbar" id="searchbar-query" v-model="searchbar" @keyup.enter="updateSearchbar"
-          placeholder="Type query, then hit 'Enter' (powered by breser.dev)" />
+        <input type="text" class="searchbar" id="searchbar-query" v-model="store.searchbar"
+          placeholder='Filter logs... (example: data.user == "admin")' />
         <!-- <button class="btn clear" @click="updateSearchbar" style="display: flex;align-items: center;">
           Search
           <CornerRightDown
@@ -819,8 +822,10 @@ const processHighlight = (text: string | undefined) => {
               <th v-if="store.correlationFilter">Trace
               </th>
             </tr>
-            <tr class="row" :class="{ opened: row.opened, open: row.open }" v-for="row in store.displayRows"
-              @click="store.openLogDrawer(row)" :style="(row.msg.style as StyleValue || {})">
+            <tr :id="'row-' + row.id" class="row"
+              :class="{ opened: row.opened, open: row.open, highlighted: store.highlightedRowId === row.id }"
+              v-for="row in store.displayRows" @click="store.openLogDrawer(row)"
+              :style="(row.msg.style as StyleValue || {})">
               <td>
                 <span class="mark" :class="{ active: row.starred }" @click.stop="store.toggleRowMark(row)">
                   ⬤
@@ -835,7 +840,7 @@ const processHighlight = (text: string | undefined) => {
                   @contextmenu.prevent="useContextMenuStore().show($event, { type: 'cell', value: row.cells[k2].text, columnId: c.id, error: row.cells[k2].error })">
                 </div>
                 <div v-else :style="{ width: columns[k2].width + 'px' }"
-                  @contextmenu.prevent="useContextMenuStore().show($event, { type: 'cell', value: row.cells[k2].text, columnId: c.id, error: row.cells[k2].error })">
+                  @contextmenu.prevent="useContextMenuStore().show($event, { type: 'cell', value: row.cells[k2].text, columnId: c.id, error: row.cells[k2].error, rowId: row.id })">
                   {{ row.cells[k2].text !== undefined ? row.cells[k2].text : row.cells[k2].error || "&nbsp;" }}
                 </div>
 

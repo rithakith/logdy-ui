@@ -302,6 +302,12 @@
           font-weight: 800;
           background-color: var(--hl-bg3) !important;
         }
+
+        tr.row.highlighted {
+          background-color: var(--info) !important;
+          opacity: 1 !important;
+          border-left: 2px solid white;
+        }
       }
     }
   }
@@ -423,4 +429,4 @@
       }
     }
   }
-}
+}

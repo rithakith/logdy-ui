@@ -48,7 +48,8 @@ export function defineEventBus<T extends EventDefinition>(_: T = {} as T) {
 
 // Usage example: create a typed event bus
 export type GlobalEvents = {
-    'searchbar-update': [value: string]
+    'searchbar-update': [value: string],
+    'scroll-to-row': [id: string]
 }
 
 // Create a global instance
