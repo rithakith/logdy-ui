@@ -711,11 +711,6 @@ const processHighlight = (text: string | undefined) => {
       <div class="right">
         <input type="text" class="searchbar" id="searchbar-query" v-model="store.searchbar"
           placeholder='Filter logs... (example: data.user == "admin")' />
-        <!-- <button class="btn clear" @click="updateSearchbar" style="display: flex;align-items: center;">
-          Search
-          <CornerRightDown
-            style="margin-left: 5px; border:1px solid white; border-radius: 2px; padding: 2px; height: 10px; width:10px" />
-        </button> -->
         <button class="btn clear" @click="clearSearchbar">
           <Close />
         </button>
@@ -837,7 +832,7 @@ const processHighlight = (text: string | undefined) => {
                 :class="{ 'cell-error': row.cells[k2].error }">
                 <div v-if="row.cells[k2].allowHtmlInText || store.hasActiveHighlights" :style="{ width: columns[k2].width + 'px' }"
                   v-html="row.cells[k2].text !== undefined ? processHighlight(row.cells[k2].text) : row.cells[k2].error || '&nbsp;'"
-                  @contextmenu.prevent="useContextMenuStore().show($event, { type: 'cell', value: row.cells[k2].text, columnId: c.id, error: row.cells[k2].error })">
+                  @contextmenu.prevent="useContextMenuStore().show($event, { type: 'cell', value: row.cells[k2].text, columnId: c.id, error: row.cells[k2].error, rowId: row.id })">
                 </div>
                 <div v-else :style="{ width: columns[k2].width + 'px' }"
                   @contextmenu.prevent="useContextMenuStore().show($event, { type: 'cell', value: row.cells[k2].text, columnId: c.id, error: row.cells[k2].error, rowId: row.id })">

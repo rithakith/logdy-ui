@@ -226,10 +226,11 @@ export const useMainStore = defineStore("main", () => {
     })
 
     const filterCorrelated = (row: Row | Message) => {
-        if (!row.correlation_id) {
+        const correlationId = 'msg' in row ? row.msg.correlation_id : row.correlation_id;
+        if (!correlationId) {
             return
         }
-        filterCorrelatedId(row.correlation_id)
+        filterCorrelatedId(correlationId)
     }
 
     const filterCorrelatedId = (id: string) => {
@@ -458,7 +459,7 @@ export const useMainStore = defineStore("main", () => {
         })
 
         let breserResults: boolean[] = []
-        if (isRecordJson && breserQuery.value.length > 0 && breserQueryError.value.length === 0) {
+        if (isRecordJson.value && breserQuery.value.length > 0 && breserQueryError.value.length === 0) {
             let res = BreserFilterData(response.map(m => {
                 return {
                     data: m.msg.json_content,

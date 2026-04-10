@@ -49,7 +49,7 @@ export const useContextMenuStore = defineStore("context_menu", () => {
                     actions.value?.push({
                         label: "Display correlated lines",
                         fn: () => {
-                            useMainStore().filterCorrelatedId(type.value!, type.rowId)
+                            useMainStore().filterCorrelatedId(type.value!)
                             hide()
                         }
                     })
