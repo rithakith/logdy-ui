@@ -133,7 +133,8 @@ export class Storage<T extends { id?: string }> {
 
 export const storageApp = new Storage<{
     id?: string,
-    password?: string
+    password?: string,
+    highlights?: { id: string, text: string, color: string }[]
 }>('app')
 
 export const storageLogs = new Storage<StoredMessage>('logs')

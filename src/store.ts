@@ -74,6 +74,15 @@ export const useMainStore = defineStore("main", () => {
     const rowsIds = ref<Record<string, boolean>>({})
     const facets = ref<FacetValues>({})
     const searchbar = ref<string>("")
+    const highlights = ref<{ id: string, text: string, color: string }[]>(
+        storageApp.getOne("main")?.highlights || [
+            { id: Math.random().toString(36).substr(2, 9), text: "", color: "#ffff00" }
+        ]
+    )
+
+    watch(highlights, () => {
+        storageApp.upsert("main", { highlights: highlights.value })
+    }, { deep: true })
     const settingsDrawer = ref<boolean>(false)
     const correlationFilter = ref<string>("")
     const tracesRows = ref<Record<string, TraceRow>>({})
@@ -313,6 +322,27 @@ export const useMainStore = defineStore("main", () => {
         searchbar.value = ""
     }
 
+    const addHighlight = () => {
+        const colors = ["#ffff00", "#38bdf8", "#fbbf24", "#34d399", "#f87171", "#a78bfa"];
+        const color = colors[highlights.value.length % colors.length];
+        highlights.value.push({
+            id: Math.random().toString(36).substr(2, 9),
+            text: "",
+            color
+        });
+    }
+
+    const removeHighlight = (id: string) => {
+        highlights.value = highlights.value.filter(h => h.id !== id);
+        if (highlights.value.length === 0) {
+            addHighlight();
+        }
+    }
+
+    const hasActiveHighlights = computed(() => {
+        return highlights.value.some(h => h.text.trim().length > 0)
+    })
+
     const isRecordJson = computed(() => {
         return rows.value[0] && rows.value[0].msg.is_json == true
     })
@@ -540,6 +570,10 @@ export const useMainStore = defineStore("main", () => {
         searchbar,
         searchbarValid,
         searchClear,
+        highlights,
+        hasActiveHighlights,
+        addHighlight,
+        removeHighlight,
 
         toggleRowMark,
         facetSort,

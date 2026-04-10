@@ -603,6 +603,73 @@ const updateSampleLine = () => {
   sampleLineIndex.value = Math.floor(Math.random() * store.rows.length)
 }
 
+const escapeRegex = (string: string) => {
+  return string.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
+}
+
+const processHighlight = (text: string | undefined) => {
+  if (text === undefined || text === null) return text;
+
+  const activeRules = store.highlights.filter(h => h.text.trim().length > 0);
+  if (activeRules.length === 0) return text;
+
+  const textStr = text.toString();
+  const occupied = new Array(textStr.length).fill(false);
+  const matches: { start: number, end: number, color: string }[] = [];
+
+  // 1. Collect non-overlapping matches based on definition order precedence
+  for (const rule of activeRules) {
+    const pattern = escapeRegex(rule.text);
+    const regex = new RegExp(pattern, 'gi');
+    let match;
+    
+    while ((match = regex.exec(textStr)) !== null) {
+      const start = match.index;
+      const end = start + match[0].length;
+      
+      // Check if any character in this range is already occupied
+      let isOverlap = false;
+      for (let i = start; i < end; i++) {
+        if (occupied[i]) {
+          isOverlap = true;
+          break;
+        }
+      }
+
+      if (!isOverlap) {
+        // Claim the range
+        for (let i = start; i < end; i++) {
+          occupied[i] = true;
+        }
+        matches.push({ start, end, color: rule.color });
+      }
+
+      // Avoid infinite loops for zero-length matches (though escapeRegex should prevent this)
+      if (regex.lastIndex === start) {
+        regex.lastIndex++;
+      }
+    }
+  }
+
+  if (matches.length === 0) return text;
+
+  // 2. Sort matches by start position for single-pass construction
+  matches.sort((a, b) => a.start - b.start);
+
+  // 3. Construct the HTML string
+  let result = "";
+  let lastIndex = 0;
+  for (const match of matches) {
+    result += textStr.substring(lastIndex, match.start);
+    const piece = textStr.substring(match.start, match.end);
+    result += `<mark style="background-color: ${match.color}; color: black; border-radius: 2px; padding: 0 2px;">${piece}</mark>`;
+    lastIndex = match.end;
+  }
+  result += textStr.substring(lastIndex);
+
+  return result;
+}
+
 </script>
 
 <template>
@@ -623,7 +690,7 @@ const updateSampleLine = () => {
   <UpdateBar v-if="useNotificationBarStore().display" />
   <DemoBar v-if="store.demoMode" @start="store.demoStatus = 'started'" @stop="store.demoStatus = 'stopped'"
     @mode="changeDemoMode" @add="addDemoData(100)" />
-  <div :class="{ 'demo': store.demoMode, 'update': useNotificationBarStore().display }">
+  <div class="main-app" :class="{ 'demo': store.demoMode, 'update': useNotificationBarStore().display }">
     <div class="top-bar">
       <div class="left">
         <div class="logo">
@@ -657,6 +724,20 @@ const updateSampleLine = () => {
       </div>
       <div class="end">
         <TopBar />
+      </div>
+    </div>
+    <div class="highlights-bar">
+      <div class="highlight-controls-list">
+        <div v-for="h in store.highlights" :key="h.id" class="highlight-rule">
+          <input type="text" class="searchbar highlight-input" v-model="h.text" placeholder="Highlight text..." />
+          <input type="color" v-model="h.color" class="color-picker" title="Highlight color" />
+          <button class="btn clear" @click="store.removeHighlight(h.id)">
+            <Close />
+          </button>
+        </div>
+        <button class="btn clear add-hl" @click="store.addHighlight()" title="Add highlight rule">
+          <span style="font-weight: 800; font-size: 16px;">+</span>
+        </button>
       </div>
     </div>
     <div class="layout" @mouseup="endDragging">
@@ -749,8 +830,8 @@ const updateSampleLine = () => {
                   backgroundColor: (store.layout.settings.paintCorrelationIdCell && store.layout.settings.correlationIdField == c.name) ? hashStringToRgb(row.cells[k2].text||'', 40): ''
                 } as StyleValue)"
                 :class="{ 'cell-error': row.cells[k2].error }">
-                <div v-if="row.cells[k2].allowHtmlInText" :style="{ width: columns[k2].width + 'px' }"
-                  v-html="row.cells[k2].text !== undefined ? row.cells[k2].text : row.cells[k2].error || '&nbsp;'"
+                <div v-if="row.cells[k2].allowHtmlInText || store.hasActiveHighlights" :style="{ width: columns[k2].width + 'px' }"
+                  v-html="row.cells[k2].text !== undefined ? processHighlight(row.cells[k2].text) : row.cells[k2].error || '&nbsp;'"
                   @contextmenu.prevent="useContextMenuStore().show($event, { type: 'cell', value: row.cells[k2].text, columnId: c.id, error: row.cells[k2].error })">
                 </div>
                 <div v-else :style="{ width: columns[k2].width + 'px' }"

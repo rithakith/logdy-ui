@@ -24,9 +24,16 @@
   font-weight: 700;
   src: url('../fonts/roboto-mono-v23-latin-700.woff2') format('woff2'); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
 }
+  
+.main-app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
 
 .top-bar {
-    height: 50px;
+    min-height: 50px;
+    height: auto;
     display: flex;
     align-items: center;
     flex-direction: row;
@@ -102,6 +109,7 @@
         background: rgba(255,255,255, .1) !important;
         border-bottom-left-radius: 0;
       }
+
     }
   
     .end {
@@ -131,7 +139,7 @@
   
   .layout {
     display: flex;
-    height: calc(100vh - 66px);
+    flex-grow: 1;
     overflow: hidden;
   
     .mid-col {
@@ -346,3 +354,73 @@
   }
 
   @import url(facet.scss);
+
+.highlights-bar {
+  background-color: var(--hl-bg2);
+  border-bottom: 1px solid var(--hl-bg);
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+
+  .highlight-controls-list {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    .highlight-rule {
+      display: flex;
+      align-items: center;
+      background: var(--bg);
+      border-radius: 4px;
+      padding: 0 0 0 5px;
+
+      .highlight-input {
+        border: none;
+        background: transparent;
+        color: var(--font);
+        font-family: 'Roboto mono', monospace;
+        font-size: 12px;
+        padding: 4px;
+        width: 150px;
+        outline: none;
+      }
+
+      .color-picker {
+        height: 24px;
+        width: 24px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        padding: 0;
+        margin: 0 5px;
+      }
+
+      .clear {
+        background: transparent !important;
+        border-radius: 0 4px 4px 0;
+        padding: 4px 8px;
+        opacity: 0.6;
+        cursor: pointer;
+        &:hover {
+          opacity: 1;
+        }
+      }
+    }
+
+    .add-hl {
+      background: var(--hl-bg3);
+      border-radius: 4px;
+      padding: 2px 10px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      color: white;
+      cursor: pointer;
+      &:hover {
+        background: var(--info);
+      }
+    }
+  }
+}
