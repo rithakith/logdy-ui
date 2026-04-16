@@ -21,6 +21,7 @@ body.dark {
   --hl-bg3: #595959;
   --bg-btn: #1a1a1a;
   --info: rgb(76, 94, 154);
+  --title-bg: #2d2d2d;
 }
 
 body.light{
@@ -33,6 +34,7 @@ body.light{
   --bg-btn: #c5c5c5;
   --danger: #ff8282;
   --info: rgb(145, 155, 186);
+  --title-bg: #eeeeee;
 }
 
 @media (prefers-color-scheme: light) {

@@ -515,6 +515,14 @@ const clearSearchbar = () => {
   searchbar.value = ""
 }
 
+watch(() => store.layout.settings.applicationName, (newVal) => {
+  if (newVal && newVal.trim().length > 0) {
+    window.document.title = newVal
+  } else {
+    window.document.title = 'Logdy-RK'
+  }
+}, { immediate: true })
+
 watch(() => store.initSettings?.received, (newVal?: boolean) => {
   if (newVal && store.initSettings?.analyticsEnabled) {
     loadAnalytics(false)
@@ -696,8 +704,9 @@ const processHighlight = (text: string | undefined) => {
   <div class="main-app" :class="{ 'demo': store.demoMode, 'update': useNotificationBarStore().display }">
     <div class="top-bar">
       <div class="left">
-        <div class="logo">
-          <a href="https://logdy.dev" target="_blank"><img src="/logdy-transparent.png" /></a>
+        <div class="logo-rk">
+          <span class="title">Logdy-RK</span>
+          <span class="credit">Modified from <a href="https://logdy.dev" target="_blank">Logdy</a></span>
         </div>
         <div class="docs link-style">
           <a href="https://logdy.dev/docs/quick-start" target="_blank">Docs
@@ -737,6 +746,9 @@ const processHighlight = (text: string | undefined) => {
           <span style="font-weight: 800; font-size: 16px;">+</span>
         </button>
       </div>
+    </div>
+    <div class="application-title-bar" v-if="store.layout.settings.applicationName && store.layout.settings.applicationName.trim().length > 0">
+      {{ store.layout.settings.applicationName }}
     </div>
     <div class="layout" @mouseup="endDragging">
       <div style="position: relative">

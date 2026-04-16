@@ -252,6 +252,9 @@ onMounted(() => {
     watch(() => settings.value.correlationIdField, () => {
         settingsChanged.value = true
     })
+    watch(() => settings.value.applicationName, () => {
+        settingsChanged.value = true
+    })
 })
 
 onUnmounted(() => {
@@ -491,6 +494,12 @@ const addMiddleware = () => {
                     <div>Maximum number of log messages stored in the browser</div>
                     <div>
                         <input class="input" v-model="settings.maxMessages" type="number" />
+                    </div>
+                </div>
+                <div class="block">
+                    <div>Application Name (tab title)</div>
+                    <div>
+                        <input class="input" v-model="settings.applicationName" type="text" />
                     </div>
                 </div>
                 <div class="block" style="margin-top: 10px">

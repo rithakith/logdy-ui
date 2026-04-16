@@ -97,7 +97,7 @@ export const useMainStore = defineStore("main", () => {
         idx?: number
     }>({})
 
-    const layout = ref<Layout>(new Layout('main', { leftColWidth: 300, drawerColWidth: 900, maxMessages: 1000, middlewares: [], entriesOrder: 'desc' }))
+    const layout = ref<Layout>(new Layout('main', { leftColWidth: 300, drawerColWidth: 900, maxMessages: 100000, middlewares: [], entriesOrder: 'desc', applicationName: '' }))
 
     let confirmFn: (() => void) | null = null;
 

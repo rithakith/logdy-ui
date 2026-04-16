@@ -10,7 +10,7 @@ import { themeHandler } from './theme'
 import { BreserInit } from './breser'
 
 window.moment = moment
-window.document.title = 'Logdy'
+window.document.title = 'Logdy-RK'
 
 themeHandler.initTheme();
 
