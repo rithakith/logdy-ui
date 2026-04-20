@@ -1,5 +1,5 @@
 import { Layout } from "./config";
-import { StoredMessage } from "./types";
+import { StoredMessage, ReceiveStatus, Trigger } from "./types";
 
 const APP_PREFIX = 'logdy'
 
@@ -134,7 +134,10 @@ export class Storage<T extends { id?: string }> {
 export const storageApp = new Storage<{
     id?: string,
     password?: string,
-    highlights?: { id: string, text: string, color: string }[]
+    highlights?: { id: string, text: string, color: string }[],
+    triggers?: Trigger[],
+    receiveStatus?: ReceiveStatus,
+    triggersBarVisible?: boolean
 }>('app')
 
 export const storageLogs = new Storage<StoredMessage>('logs')

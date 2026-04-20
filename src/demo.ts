@@ -78,8 +78,19 @@ export function getLayout(json: boolean = true): Layout {
         id: "",
         name: "ts",
         handlerTsCode: `(line: Message): CellHandler => {
-            return { text: moment().format('DD-MM HH:mm:ss.SSS') }
-        }`
+    const tz = (window as any).logdyTimezone || 'UTC';
+    try {
+        return { 
+            text: new Intl.DateTimeFormat('en-US', {
+                timeZone: tz,
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+            }).format(new Date(line.ts)) 
+        }
+    } catch (e) {
+        return { text: new Date(line.ts).toISOString() }
+    }
+}`
     })
     l.add({
         id: "",

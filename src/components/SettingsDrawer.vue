@@ -187,9 +187,11 @@ const settingsChanged = ref<boolean>(false)
 let selectedColumn = ref<Column>()
 let sampleLineVisible = ref<boolean>(true)
 let selectedMiddleware = ref<Middleware>()
-let settings = ref<Settings>({ leftColWidth: 200, drawerColWidth: 900, maxMessages: 1000, middlewares: [], entriesOrder: "desc"})
+let settings = ref<Settings>({ leftColWidth: 200, drawerColWidth: 900, maxMessages: 1000, middlewares: [], entriesOrder: "desc", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone})
 let saveColumnError = ref<string | null>(null)
 let saveSettingsError = ref<string | null>(null)
+const store = useMainStore()
+const localTriggers = ref<any[]>([])
 
 const props = defineProps<{
     layout: Layout,
@@ -255,6 +257,14 @@ onMounted(() => {
     watch(() => settings.value.applicationName, () => {
         settingsChanged.value = true
     })
+    watch(() => settings.value.timezone, () => {
+        settingsChanged.value = true
+    })
+
+    watch(localTriggers, () => {
+        settingsChanged.value = true
+    }, { deep: true })
+
 })
 
 onUnmounted(() => {
@@ -299,16 +309,19 @@ const save = () => {
 
 const saveSettings = () => {
     emit('settings-update', { ...settings.value! })
+    store.triggers = JSON.parse(JSON.stringify(localTriggers.value))
     settingsChanged.value = false
 }
 const saveSettingsAndClose = () => {
     emit('settings-update', { ...settings.value! })
+    store.triggers = JSON.parse(JSON.stringify(localTriggers.value))
     emit('close')
 }
 
 const cancelSettings = () => {
     cancelMiddleware()
     settings.value = JSON.parse(JSON.stringify(props.layout.settings))
+    localTriggers.value = JSON.parse(JSON.stringify(store.triggers))
     setTimeout(() => { settingsChanged.value = false }, 10)
 }
 
@@ -436,7 +449,7 @@ const cancelMiddleware = () => {
     selectedMiddleware.value = undefined
 }
 const addMiddleware = () => {
-    saveSettingsError.value=null
+    saveSettingsError.value = null
     let id = "m_" + Math.random().toString().substring(2, 8)
     selectedMiddleware.value = {
         id,
@@ -449,6 +462,23 @@ const addMiddleware = () => {
     }
 
     loadModel(editorMiddleware, models[id], 'middleware-editor')
+}
+
+const addLocalTrigger = () => {
+    localTriggers.value.push({
+        id: Math.random().toString(36).substr(2, 9),
+        pattern: "",
+        label: "",
+        enabled: false,
+        sound: true,
+        soundType: 'beep',
+        alert: true,
+        matchCount: 0
+    });
+}
+
+const removeLocalTrigger = (id: string) => {
+    localTriggers.value = localTriggers.value.filter(t => t.id !== id);
 }
 
 </script>
@@ -502,6 +532,18 @@ const addMiddleware = () => {
                         <input class="input" v-model="settings.applicationName" type="text" />
                     </div>
                 </div>
+                <div class="block">
+                    <div>Timezone</div>
+                    <div>
+                        <select class="input" v-model="settings.timezone">
+                            <option v-for="tz in (Intl as any).supportedValuesOf('timeZone')" :key="tz" :value="tz">
+                                {{ tz }}
+                            </option>
+                        </select>
+                        <button class="btn-sm" style="margin-top: 5px" @click="settings.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone">Detect browser timezone</button>
+                    </div>
+                </div>
+
                 <div class="block" style="margin-top: 10px">
                     <span>Middlewares <button class="btn-sm" @click="addMiddleware">Add</button></span>
                     <div v-for="m in settings.middlewares" style="margin:10px 0">
@@ -527,8 +569,29 @@ const addMiddleware = () => {
                         <button @click="saveMiddleware" :disabled="!selectedMiddleware.name" class="btn-sm">Save middleware</button>
                         <button @click="cancelMiddleware" class="btn-sm">Cancel</button>
                     </div>
-
                 </div>
+
+                <div class="block" style="margin-top: 10px">
+                    <span>Triggers <button class="btn-sm" @click="addLocalTrigger()">Add</button></span>
+                    <div v-for="t in localTriggers" :key="t.id" class="trigger-row">
+                        <div class="trigger-main">
+                            <input type="text" v-model="t.pattern" class="input" placeholder="Regex pattern (e.g. error|warn)" style="width: 180px; margin-right: 5px;" />
+                            <input type="text" v-model="t.label" class="input" placeholder="Label" style="width: 120px; margin-right: 5px;" />
+                            <button @click="removeLocalTrigger(t.id)" class="btn-sm btn-danger" style="margin-left: auto;">Remove</button>
+                        </div>
+                        <div class="trigger-controls">
+                            <label><input type="checkbox" v-model="t.enabled" /> Enabled</label>
+                            <label><input type="checkbox" v-model="t.sound" /> Sound</label>
+                            <select v-if="t.sound" v-model="t.soundType" class="input-inline">
+                                <option value="beep">Beep</option>
+                                <option value="high">High Pitch</option>
+                                <option value="double">Double</option>
+                            </select>
+                            <label><input type="checkbox" v-model="t.alert" /> Alert</label>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="buttons">
                     <button :disabled="!settingsChanged" class="btn-sm" :class="{ success: settingsChanged }"
                         @click="saveSettings">Save</button>
@@ -740,5 +803,43 @@ hr {
     &.grey {
         color: rgba(255, 255, 255, .5)
     }
+}
+
+.trigger-row {
+    margin: 10px 0;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    .trigger-main {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .trigger-controls {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        font-size: 12px;
+
+        label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+        }
+    }
+}
+
+.input-inline {
+    background: var(--bg-btn);
+    color: var(--font);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    font-size: 11px;
+    padding: 2px 4px;
+    cursor: pointer;
 }
 </style>

@@ -9,6 +9,7 @@ import Bolt from './icon/Bolt.vue'
 import DateModal from '../components/DateModal.vue';
 import { ref } from 'vue';
 import Cog from './icon/Cog.vue';
+import Bell from './icon/Bell.vue';
 
 const store = useMainStore()
 const datepickerVisible = ref<boolean>()
@@ -49,6 +50,9 @@ const updateDates = (range: { from: number, to: number }) => {
         </button>
         <button @click="clearAll" class="ctrl-btn" v-tooltip="'Clear all messages'">
             <Close width="19" height="19" />
+        </button>
+        <button @click="store.triggersBarVisible = !store.triggersBarVisible" class="ctrl-btn" :class="{ active: store.triggersBarVisible }" v-tooltip="'Toggle Triggers Bar'">
+            <Bell width="19" height="19" />
         </button>
     </div>
     <button @click="store.settingsDrawer = true" style="padding: 5px 8px">

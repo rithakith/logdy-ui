@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { computed, ref, watch } from "vue";
 import { storageApp, storageLogs } from "./storage";
-import { FacetValues, Message, Row, TraceRow } from "./types";
+import { FacetValues, Message, Row, TraceRow, ReceiveStatus, Trigger, Toast } from "./types";
 import { Layout } from "./config";
 import { useFilterStore } from "./stores/filter";
 import { client } from "./api";
@@ -40,7 +40,7 @@ export interface UpdateResponse {
     excerpt: string;
 }
 
-type ReceiveStatus = "paused" | "following" | "following_cursor"
+
 
 interface ReceiveCounters {
     MessageCount: number,
@@ -65,7 +65,7 @@ export const useMainStore = defineStore("main", () => {
     const confirmShow = ref<boolean>(false);
 
     const status = ref<"connected" | "not connected">("not connected")
-    const receiveStatus = ref<ReceiveStatus>(demoMode.value ? "following" : "paused")
+    const receiveStatus = ref<ReceiveStatus>(storageApp.getOne("main")?.receiveStatus || "following")
     const receiveCounters = ref<ReceiveCounters>({ LastDeliveredIdx: 0, MessageCount: 0, MessagesToTail: 0 })
     const anotherTab = ref<boolean>(false)
     const modalShow = ref<"" | "auth" | "import" | "export-logs" | "load-logs" | "feedback">("")
@@ -84,6 +84,136 @@ export const useMainStore = defineStore("main", () => {
     watch(highlights, () => {
         storageApp.upsert("main", { highlights: highlights.value })
     }, { deep: true })
+
+    const triggers = ref<Trigger[]>(
+        storageApp.getOne("main")?.triggers || []
+    )
+
+    watch(triggers, () => {
+        storageApp.upsert("main", { triggers: triggers.value })
+    }, { deep: true })
+
+    const toasts = ref<Toast[]>([])
+    const lastMatchedTriggerId = ref<string | null>(null)
+    const toastTimeouts: Record<string, any> = {}
+    const triggersBarVisible = ref<boolean>(
+        storageApp.getOne("main")?.triggersBarVisible ?? true
+    )
+
+    watch(triggersBarVisible, () => {
+        storageApp.upsert("main", { triggersBarVisible: triggersBarVisible.value })
+    })
+
+    const addToast = (msg: string, type: Toast['type'] = 'info', triggerId?: string) => {
+        if (triggerId) {
+            const existing = toasts.value.find(t => t.triggerId === triggerId)
+            if (existing) {
+                existing.count++
+                if (toastTimeouts[existing.id]) {
+                    clearTimeout(toastTimeouts[existing.id])
+                }
+                toastTimeouts[existing.id] = setTimeout(() => {
+                    removeToast(existing.id)
+                }, 5000)
+                return
+            }
+        }
+
+        const id = Math.random().toString(36).substr(2, 9)
+        toasts.value.push({ id, msg, type, count: 1, triggerId })
+        
+        toastTimeouts[id] = setTimeout(() => {
+            removeToast(id)
+        }, 5000)
+    }
+
+    const removeToast = (id: string) => {
+        if (toastTimeouts[id]) {
+            clearTimeout(toastTimeouts[id])
+            delete toastTimeouts[id]
+        }
+        toasts.value = toasts.value.filter(t => t.id !== id)
+    }
+
+    const playTriggerSound = (type: Trigger['soundType']) => {
+        try {
+            const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
+            if (!AudioContextClass) return;
+            const audioCtx = new AudioContextClass();
+            
+            const playBeep = (freq: number, duration: number, startTime: number = 0) => {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime + startTime);
+                gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + startTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + startTime + duration);
+                oscillator.start(audioCtx.currentTime + startTime);
+                oscillator.stop(audioCtx.currentTime + startTime + duration);
+            };
+
+            if (type === 'beep') {
+                playBeep(440, 0.5);
+            } else if (type === 'high') {
+                playBeep(880, 0.3);
+            } else if (type === 'double') {
+                playBeep(440, 0.2);
+                playBeep(440, 0.2, 0.3);
+            }
+        } catch (e) {
+            console.error("Failed to play sound", e);
+        }
+    }
+
+    const checkTriggers = (msg: Message) => {
+        triggers.value.forEach(t => {
+            if (!t.enabled) return;
+            if (!t.pattern.trim() || t.pattern.includes('\0')) {
+                t.enabled = false;
+                return;
+            }
+            try {
+                const regex = new RegExp(t.pattern, 'i');
+                if (regex.test(msg.content)) {
+                    t.matchCount = (t.matchCount || 0) + 1;
+                    if (t.sound) playTriggerSound(t.soundType);
+                    if (t.alert) addToast(t.label || `Trigger: ${t.pattern}`, 'info', t.id);
+                    
+                    lastMatchedTriggerId.value = t.id;
+                    setTimeout(() => {
+                        if (lastMatchedTriggerId.value === t.id) {
+                            lastMatchedTriggerId.value = null;
+                        }
+                    }, 1000);
+                }
+            } catch (e) {
+                // Invalid regex, ignore
+            }
+        })
+    }
+
+    const addTrigger = () => {
+        triggers.value.push({
+            id: Math.random().toString(36).substr(2, 9),
+            pattern: "",
+            label: "",
+            enabled: false,
+            sound: true,
+            soundType: 'beep',
+            alert: true,
+            matchCount: 0
+        });
+    }
+
+    const removeTrigger = (id: string) => {
+        triggers.value = triggers.value.filter(t => t.id !== id);
+    }
+    watch(receiveStatus, () => {
+        storageApp.upsert("main", { receiveStatus: receiveStatus.value })
+    })
     const settingsDrawer = ref<boolean>(false)
     const correlationFilter = ref<string>("")
     const highlightedRowId = ref<string>("")
@@ -97,7 +227,20 @@ export const useMainStore = defineStore("main", () => {
         idx?: number
     }>({})
 
-    const layout = ref<Layout>(new Layout('main', { leftColWidth: 300, drawerColWidth: 900, maxMessages: 100000, middlewares: [], entriesOrder: 'desc', applicationName: '' }))
+    const layout = ref<Layout>(new Layout('main', { 
+        leftColWidth: 300, 
+        drawerColWidth: 900, 
+        maxMessages: 100000, 
+        middlewares: [], 
+        entriesOrder: 'desc', 
+        applicationName: '',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    }))
+
+    watch(() => layout.value.settings.timezone, (newVal) => {
+        (window as any).logdyTimezone = newVal
+    }, { immediate: true })
+
 
     let confirmFn: (() => void) | null = null;
 
@@ -610,6 +753,16 @@ export const useMainStore = defineStore("main", () => {
         facetSort,
 
         datepicker,
-        datepickerLabel
+        datepickerLabel,
+
+        triggers,
+        addTrigger,
+        removeTrigger,
+        checkTriggers,
+        lastMatchedTriggerId,
+        triggersBarVisible,
+        toasts,
+        addToast,
+        removeToast
     };
 });

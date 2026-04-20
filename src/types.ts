@@ -1,5 +1,6 @@
 
 export type ConnectionStatus = "connected" | "not connected"
+export type ReceiveStatus = "paused" | "following" | "following_cursor"
 
 export type Settings = {
     maxMessages: number,
@@ -10,6 +11,26 @@ export type Settings = {
     correlationIdField?: string,
     paintCorrelationIdCell?: boolean,
     applicationName?: string,
+    timezone?: string,
+}
+
+export type Trigger = {
+    id: string,
+    pattern: string,
+    label: string,
+    enabled: boolean,
+    sound: boolean,
+    soundType: 'beep' | 'high' | 'double',
+    alert: boolean,
+    matchCount: number,
+}
+
+export type Toast = {
+    id: string,
+    msg: string,
+    type: 'info' | 'error' | 'success' | 'warning',
+    count: number,
+    triggerId?: string
 }
 
 export type Message = {

@@ -1,6 +1,8 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { useMainStore } from "../store";
+import { Trigger } from "../types";
+import { globalEventBus } from "../event_bus";
 
 interface Action {
     label: string
@@ -14,8 +16,11 @@ interface ActionColumnHeader {
 interface ActionCell {
     type: "cell", value?: string, columnId: string, error?: string, rowId: string
 }
+interface ActionTrigger {
+    type: "trigger", trigger: Trigger
+}
 
-type ActionTypes = ActionColumnHeader | ActionCell
+type ActionTypes = ActionColumnHeader | ActionCell | ActionTrigger
 
 
 export const useContextMenuStore = defineStore("context_menu", () => {
@@ -118,6 +123,51 @@ export const useContextMenuStore = defineStore("context_menu", () => {
                         hide()
                     },
                     disabled: () => !useMainStore().isFacetActive(type.name)
+                })
+                break
+            case "trigger":
+                const t = type.trigger
+                actions.value?.push({
+                    label: t.enabled ? "Stop trigger" : "Start trigger",
+                    fn: () => {
+                        t.enabled = !t.enabled
+                        hide()
+                    }
+                })
+                actions.value?.push({
+                    label: "Show triggers (Search)",
+                    fn: () => {
+                        globalEventBus.emit('searchbar-update', t.pattern)
+                        hide()
+                    }
+                })
+                actions.value?.push({
+                    label: t.sound ? "Stop sound" : "Start sound",
+                    fn: () => {
+                        t.sound = !t.sound
+                        hide()
+                    }
+                })
+                actions.value?.push({
+                    label: t.alert ? "Stop alert msg" : "Start alert msg",
+                    fn: () => {
+                        t.alert = !t.alert
+                        hide()
+                    }
+                })
+                actions.value?.push({
+                    label: "Reset count",
+                    fn: () => {
+                        t.matchCount = 0
+                        hide()
+                    }
+                })
+                actions.value?.push({
+                    label: "Remove trigger",
+                    fn: () => {
+                        useMainStore().removeTrigger(t.id)
+                        hide()
+                    }
                 })
                 break
         }

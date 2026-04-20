@@ -23,6 +23,7 @@ import HideColumnIcon from "./components/HideColumnIcon.vue"
 import FilterIcon from "./components/icon/Filter.vue"
 import ExportLogs from "./components/ExportLogs.vue"
 import ContextMenu from "./components/ContextMenu.vue";
+import ToastNotification from "./components/ToastNotification.vue";
 import { useMainStore, InitSettings } from './store';
 import { useFilterStore } from "./stores/filter";
 import { startDragging, endDragging, startColumnDragging } from './dragging';
@@ -36,6 +37,8 @@ import { useContextMenuStore } from './stores/contextMenu';
 import { globalEventBus } from './event_bus';
 import { useNotificationBarStore } from './stores/notificationBar';
 import { hashStringToRgb } from './utils';
+import Bell from './components/icon/Bell.vue';
+import Volume from './components/icon/Volume.vue';
 
 const store = useMainStore()
 const storeFilter = useFilterStore()
@@ -161,6 +164,7 @@ const addMessages = (msgs: Message[]): Message[] => {
     correlationIdIdx = store.layout.columns.findIndex(c => c.name === store.layout.settings.correlationIdField)
   }
   msgs.forEach(m => {
+    store.checkTriggers(m)
 
     let cells = store.layout.columns.filter(c => !c.hidden).map((l): CellHandler => {
       try {
@@ -309,6 +313,25 @@ const loadConfig = (load?: Layout) => {
   } else {
     store.layout.add({
       id: "",
+      name: "Time",
+      width: 100,
+      handlerTsCode: `(line: Message): CellHandler => {
+    const tz = (window as any).logdyTimezone || 'UTC';
+    try {
+        return { 
+            text: new Intl.DateTimeFormat('en-US', {
+                timeZone: tz,
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+            }).format(new Date(line.ts)) 
+        }
+    } catch (e) {
+        return { text: new Date(line.ts).toISOString() }
+    }
+}`
+    })
+    store.layout.add({
+      id: "",
       name: "raw",
       handlerTsCode: `(line: Message): CellHandler => {
           return { text: line.content || "-"}
@@ -373,7 +396,7 @@ const connectToWs = () => {
   let wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws'
   const endpoint = wsProto + '://' + window.location.host + window.location.pathname + 'ws'
   console.log("Connecting to WS", endpoint)
-  const socket = new WebSocket(endpoint + '?password=' + store.getPassword());
+  const socket = new WebSocket(endpoint + '?password=' + store.getPassword() + '&should_follow=' + (store.receiveStatus.includes('following') ? 'true' : 'false'));
   store.status = 'not connected'
   var wasOpened = false
 
@@ -694,6 +717,7 @@ const processHighlight = (text: string | undefined) => {
   </Modal>
   <ContextMenu v-if="useContextMenuStore().display" />
   <Confirm />
+  <ToastNotification />
 
   <SettingsDrawer v-if="store.settingsDrawer" @close="store.settingsDrawer = false" :layout="(store.layout as Layout)"
     @edit="columnEdited" @remove="columnRemoved" @move="reorderColumns" @settings-update="settingsUpdate"
@@ -745,6 +769,25 @@ const processHighlight = (text: string | undefined) => {
         <button class="btn clear add-hl" @click="store.addHighlight()" title="Add highlight rule">
           <span style="font-weight: 800; font-size: 16px;">+</span>
         </button>
+      </div>
+    </div>
+    <div class="triggers-bar" v-if="store.triggersBarVisible && store.triggers.length > 0">
+      <div class="bar-label" >Triggers</div>
+      <div class="trigger-list">
+        <div v-for="t in store.triggers" :key="t.id" 
+          class="trigger-chip" 
+          :class="{ disabled: !t.enabled, matching: store.lastMatchedTriggerId === t.id }"
+          @click="useContextMenuStore().show($event, { type: 'trigger', trigger: t })"
+          v-tooltip="'Click for menu. Right click for settings.'"
+          @contextmenu.prevent="store.settingsDrawer = true"
+        >
+          <div class="chip-label">{{ t.label || t.pattern }}</div>
+          <div class="chip-count" v-if="t.matchCount > 0">{{ t.matchCount }}</div>
+          <div class="chip-icons">
+            <Volume v-if="t.sound" />
+            <Bell v-if="t.alert" />
+          </div>
+        </div>
       </div>
     </div>
     <div class="application-title-bar" v-if="store.layout.settings.applicationName && store.layout.settings.applicationName.trim().length > 0">
